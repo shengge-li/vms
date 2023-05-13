@@ -1,0 +1,46 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "almalinux/9"
+
+  # Disk size configuration
+  config.disksize.size = "100GB"
+  
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 16
+    vb.memory = 16384
+    vb.name = "Almalinux9"
+  end
+
+  #config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "public_network", ip: "192.168.1.101"
+
+  config.vm.hostname = "dev-vm.local"
+
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.aliases = %w(dev-vm.local dv)
+
+  config.vm.synced_folder "./vagrant", "/vagrant", disabled: false
+  
+  config.vm.provision "shell", inline: <<-SHELL
+    
+    echo -e "root\nroot" | passwd centos
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd
+
+    sudo yum update -y
+    sudo yum install -y git vim
+    
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo dnf -y install docker-ce docker-ce-cli containerd.io
+  
+    sudo systemctl enable docker --now
+
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.4.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+
+  SHELL
+end
+
